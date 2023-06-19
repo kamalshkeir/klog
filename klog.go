@@ -123,7 +123,7 @@ func Printf(pattern string, anything ...interface{}) {
 	}
 
 	logMessage := formatLogMessage(pf, pc, file, line, pattern, anything...)
-	ss.Add(logMessage)
+	ss.Add(fmt.Sprintf(logMessage, anything...))
 	if pub != nil {
 		pub.Publish(topicPub, map[string]any{
 			"log": fmt.Sprintf(logMessage, anything...),
