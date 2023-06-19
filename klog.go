@@ -126,7 +126,7 @@ func Printf(pattern string, anything ...interface{}) {
 	ss.Add(logMessage)
 	if pub != nil {
 		pub.Publish(topicPub, map[string]any{
-			"log": logMessage,
+			"log": fmt.Sprintf(logMessage, anything...),
 		})
 	}
 	colorfulLogMessage := "\033[1;" + colorCode + "m" + logMessage + "\033[0m"
