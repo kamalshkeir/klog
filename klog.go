@@ -130,7 +130,7 @@ func Printf(pattern string, anything ...interface{}) {
 		})
 	}
 	colorfulLogMessage := "\033[1;" + colorCode + "m" + logMessage + "\033[0m"
-	fmt.Fprint(logger.Writer(), colorfulLogMessage)
+	fmt.Fprintf(logger.Writer(), colorfulLogMessage, anything...)
 }
 
 // CheckError checks if err is not nil, prints it with caller information, and returns true
