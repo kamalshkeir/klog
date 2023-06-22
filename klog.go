@@ -5,7 +5,6 @@ import (
 	"log"
 	"path"
 	"runtime"
-	"strings"
 )
 
 const (
@@ -62,36 +61,21 @@ func Printfs(pattern string, anything ...interface{}) {
 		colorCode = "34"
 	}
 	if colorUsed {
-		ll := fmt.Sprintf(pattern[2:], anything...)
-		ss.Add(ll)
-		if pub != nil {
-			pub.Publish(topicPub, map[string]any{
-				"log": ll,
-			})
-		}
-		pattern = "\033[1;" + colorCode + "m" + pattern[2:]
-	} else {
-		ll := fmt.Sprintf(pattern, anything...)
-		ss.Add(ll)
-		if pub != nil {
-			pub.Publish(topicPub, map[string]any{
-				"log": ll,
-			})
-		}
-		pattern = "\033[1;" + colorCode + "m" + pattern + "\033[0m"
+		pattern = pattern[2:]
 	}
-	if strings.HasSuffix(pattern, "\n") {
-		pattern = pattern[:len(pattern)-1] + "\033[0m\n"
-	} else {
-		pattern = pattern + "\033[0m"
+	msg := fmt.Sprintf(pattern, anything...)
+	ss.Add(msg)
+	if pub != nil {
+		pub.Publish(topicPub, map[string]any{
+			"log": msg,
+		})
 	}
-
-	fmt.Fprintf(logger.Writer(), pattern, anything...)
+	colorfulLogMessage := "\033[1;" + colorCode + "m" + msg + "\033[0m"
+	fmt.Fprint(logger.Writer(), colorfulLogMessage)
 }
 
 // Printf takes pattern(rd,gr,yl,bl,mg), varsString, varsValues and prints the formatted log message
 func Printf(pattern string, anything ...interface{}) {
-	pc, file, line := getCaller()
 	pf := "[INFO]"
 	var colorCode string
 	var colorUsed = true
@@ -121,31 +105,32 @@ func Printf(pattern string, anything ...interface{}) {
 	if colorUsed {
 		pattern = pattern[2:]
 	}
-
-	logMessage := formatLogMessage(pf, pc, file, line, pattern, anything...)
-	ss.Add(fmt.Sprintf(logMessage, anything...))
+	pc, file, line, _ := runtime.Caller(1)
+	caller := formatCaller(pc, file, line)
+	msg := pf + caller + ":" + fmt.Sprintf(pattern, anything...)
+	ss.Add(msg)
 	if pub != nil {
 		pub.Publish(topicPub, map[string]any{
-			"log": fmt.Sprintf(logMessage, anything...),
+			"log": msg,
 		})
 	}
-	colorfulLogMessage := "\033[1;" + colorCode + "m" + logMessage + "\033[0m"
-	fmt.Fprintf(logger.Writer(), colorfulLogMessage, anything...)
+	colorfulLogMessage := "\033[1;" + colorCode + "m" + msg + "\033[0m"
+	fmt.Fprint(logger.Writer(), colorfulLogMessage)
 }
 
-// CheckError checks if err is not nil, prints it with caller information, and returns true
 func CheckError(err error) bool {
 	if err != nil {
-		pc, file, line := getCaller()
-		logMessage := formatLogMessage("[ERROR]", pc, file, line, "%v", err)
-		ss.Add(logMessage)
+		pc, file, line, _ := runtime.Caller(1)
+		caller := formatCaller(pc, file, line)
+		msg := "[ERROR]" + caller + ":" + err.Error()
+		ss.Add(msg)
 		if pub != nil {
 			pub.Publish(topicPub, map[string]any{
-				"log": logMessage,
+				"log": msg,
 			})
 		}
-		colorfulLogMessage := fmt.Sprintf(Red, logMessage)
-		fmt.Print(colorfulLogMessage)
+		colorfulLogMessage := "\033[1;31m" + msg + "\n" + "\033[0m"
+		fmt.Fprint(logger.Writer(), colorfulLogMessage)
 		return true
 	}
 	return false
@@ -155,17 +140,4 @@ func CheckError(err error) bool {
 func formatCaller(pc uintptr, file string, line int) string {
 	_, filename := path.Split(file)
 	return fmt.Sprintf("[%s:%d]", filename, line)
-}
-
-// getCaller retrieves the caller information
-func getCaller() (uintptr, string, int) {
-	pc, file, line, _ := runtime.Caller(2) // Adjust the call depth based on your usage
-	return pc, file, line
-}
-
-// formatLogMessage formats the log message with the appropriate prefix and caller information
-func formatLogMessage(prefix string, pc uintptr, file string, line int, pattern string, anything ...interface{}) string {
-	caller := formatCaller(pc, file, line)
-	logMessage := fmt.Sprintf("%s%s: %s", prefix, caller, pattern)
-	return logMessage
 }
