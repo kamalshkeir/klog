@@ -16,7 +16,7 @@ const (
 )
 
 type Publisher interface {
-	Publish(topic string, data map[string]any)
+	Publish(topic string, data map[string]any, from ...string)
 }
 
 var (
@@ -105,8 +105,8 @@ func Printf(pattern string, anything ...interface{}) {
 	if colorUsed {
 		pattern = pattern[2:]
 	}
-	pc, file, line, _ := runtime.Caller(1)
-	caller := formatCaller(pc, file, line)
+	_, file, line, _ := runtime.Caller(1)
+	caller := formatCaller(file, line)
 	msg := pf + caller + ":" + fmt.Sprintf(pattern, anything...)
 	ss.Add(msg)
 	if pub != nil {
@@ -120,8 +120,8 @@ func Printf(pattern string, anything ...interface{}) {
 
 func CheckError(err error) bool {
 	if err != nil {
-		pc, file, line, _ := runtime.Caller(1)
-		caller := formatCaller(pc, file, line)
+		_, file, line, _ := runtime.Caller(1)
+		caller := formatCaller(file, line)
 		msg := "[ERROR]" + caller + ":" + err.Error()
 		ss.Add(msg)
 		if pub != nil {
@@ -137,7 +137,7 @@ func CheckError(err error) bool {
 }
 
 // formatCaller formats the caller information as desired
-func formatCaller(pc uintptr, file string, line int) string {
+func formatCaller(file string, line int) string {
 	_, filename := path.Split(file)
 	return fmt.Sprintf("[%s:%d]", filename, line)
 }
