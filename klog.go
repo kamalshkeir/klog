@@ -16,7 +16,7 @@ const (
 )
 
 type Publisher interface {
-	Publish(topic string, data map[string]any, from ...string)
+	Publish(topic string, data map[string]any)
 }
 
 var (
